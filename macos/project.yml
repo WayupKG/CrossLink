@@ -1,0 +1,32 @@
+name: CrossLink
+options:
+  bundleIdPrefix: kg.crosslink
+  deploymentTarget:
+    macOS: '13.0'
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    MACOSX_DEPLOYMENT_TARGET: '13.0'
+    CODE_SIGN_STYLE: Automatic
+targets:
+  CrossLink:
+    type: application
+    platform: macOS
+    sources:
+      - CrossLink
+    info:
+      path: CrossLink/Info.plist
+      properties:
+        CFBundleDisplayName: CrossLink
+        LSUIElement: true
+        NSLocalNetworkUsageDescription: 'CrossLink использует локальную сеть для подключения Android к Mac.'
+        NSBonjourServices:
+          - _crosslink._tcp
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: kg.crosslink.macos
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: 'NO'
+        CODE_SIGN_ENTITLEMENTS: ''

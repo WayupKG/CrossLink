@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><defs>
+<linearGradient id="A_bg" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+  <stop offset="0" stop-color="#1A1F45"/><stop offset="1" stop-color="#0A0C18"/></linearGradient>
+<radialGradient id="A_glow" cx="512" cy="512" r="460" gradientUnits="userSpaceOnUse">
+  <stop offset="0" stop-color="#6366F1" stop-opacity="0.38"/><stop offset="1" stop-color="#6366F1" stop-opacity="0"/></radialGradient>
+<linearGradient id="A_l1" x1="278.7" y1="278.7" x2="745.3" y2="745.3" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#34D399"/><stop offset="1" stop-color="#22D3EE"/></linearGradient><linearGradient id="A_l2" x1="278.7" y1="745.3" x2="745.3" y2="278.7" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#C084FC"/><stop offset="1" stop-color="#60A5FA"/></linearGradient>
+<linearGradient id="B_bg" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+  <stop offset="0" stop-color="#6D5BF6"/><stop offset="1" stop-color="#0BB5D6"/></linearGradient>
+<radialGradient id="B_hi" cx="300" cy="200" r="700" gradientUnits="userSpaceOnUse">
+  <stop offset="0" stop-color="#fff" stop-opacity="0.22"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+
+<radialGradient id="C_bg" cx="512" cy="470" r="620" gradientUnits="userSpaceOnUse">
+  <stop offset="0" stop-color="#1D2026"/><stop offset="1" stop-color="#111214"/></radialGradient>
+<linearGradient id="C_st" x1="182" y1="0" x2="842" y2="0" gradientUnits="userSpaceOnUse">
+  <stop offset="0" stop-color="#34D399"/><stop offset="0.5" stop-color="#22D3EE"/><stop offset="1" stop-color="#6366F1"/></linearGradient>
+
+<clipPath id="mac" clipPathUnits="userSpaceOnUse"><rect x="100" y="100" width="824" height="824" rx="185"/></clipPath>
+<clipPath id="droid" clipPathUnits="userSpaceOnUse"><circle cx="512" cy="512" r="341"/></clipPath>
+<filter id="drop" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-opacity="0.28"/></filter>
+
+<linearGradient id="G_bg" x1="0" y1="0" x2="0" y2="1024" gradientUnits="userSpaceOnUse">
+  <stop offset="0" stop-color="#F7F8FF"/><stop offset="1" stop-color="#E2E6F5"/></linearGradient>
+<linearGradient id="G_mac" x1="196" y1="286" x2="696" y2="616" gradientUnits="userSpaceOnUse">
+  <stop offset="0" stop-color="#7A88FF"/><stop offset="1" stop-color="#3552F5"/></linearGradient>
+<linearGradient id="G_spec" x1="566" y1="398" x2="760" y2="700" gradientUnits="userSpaceOnUse">
+  <stop offset="0" stop-color="#fff" stop-opacity="0.85"/><stop offset="0.45" stop-color="#fff" stop-opacity="0.15"/><stop offset="1" stop-color="#fff" stop-opacity="0.35"/></linearGradient>
+<filter id="G_b60" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="60"/></filter>
+<filter id="G_b22" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="22"/></filter>
+<filter id="G_b16" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="16"/></filter>
+<clipPath id="G_pc" clipPathUnits="userSpaceOnUse"><rect x="566" y="398" width="250" height="412" rx="62" /></clipPath>
+
+<linearGradient id="H_bg" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+  <stop offset="0" stop-color="#1B1F4B"/><stop offset="1" stop-color="#0B0D1F"/></linearGradient>
+<linearGradient id="H_r1" x1="0" y1="0.5" x2="1" y2="0.5">
+  <stop offset="0" stop-color="#FFB15C"/><stop offset="1" stop-color="#FF4D8D"/></linearGradient>
+<linearGradient id="H_r2" x1="0" y1="0.5" x2="1" y2="0.5">
+  <stop offset="0" stop-color="#5B6CFF"/><stop offset="1" stop-color="#2EE6D6"/></linearGradient>
+<linearGradient id="H_gloss" x1="0.5" y1="0" x2="0.5" y2="1">
+  <stop offset="0" stop-color="#fff" stop-opacity="0.45"/><stop offset="0.5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.12"/></linearGradient>
+<filter id="H_b24" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="24"/></filter>
+<clipPath id="H_c1" clipPathUnits="userSpaceOnUse">
+  <rect x="-330" y="-78" width="660" height="156" rx="78" transform="translate(512 512) rotate(45)"/></clipPath>
+
+<linearGradient id="I_bg" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+  <stop offset="0" stop-color="#0C1236"/><stop offset="1" stop-color="#2A175C"/></linearGradient>
+<radialGradient id="I_mac" cx="0.35" cy="0.3" r="0.8">
+  <stop offset="0" stop-color="#9CC2FF"/><stop offset="0.5" stop-color="#4F7DFF"/><stop offset="1" stop-color="#2440C8"/></radialGradient>
+<radialGradient id="I_ph" cx="0.35" cy="0.3" r="0.8">
+  <stop offset="0" stop-color="#FFC2DD"/><stop offset="0.5" stop-color="#FF6FAE"/><stop offset="1" stop-color="#C93A82"/></radialGradient>
+<linearGradient id="I_beam" x1="420" y1="548" x2="642" y2="404" gradientUnits="userSpaceOnUse">
+  <stop offset="0" stop-color="#7FA8FF"/><stop offset="1" stop-color="#FF8CC2"/></linearGradient>
+<filter id="I_b40" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="40"/></filter>
+<filter id="I_b14" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="14"/></filter>
+</defs><rect width="1024" height="1024" fill="url(#G_bg)"/><circle cx="420" cy="420" r="260" fill="#8C9BFF" fill-opacity="0.45" filter="url(#G_b60)"/><circle cx="700" cy="680" r="220" fill="#FF8FB8" fill-opacity="0.45" filter="url(#G_b60)"/></svg>

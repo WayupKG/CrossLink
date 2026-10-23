@@ -1,0 +1,21 @@
+.DS_Store
+
+# macOS: build output and the project xcodegen generates from project.yml
+macos/build/
+macos/CrossLink.xcodeproj/
+
+# Android
+android/.gradle/
+android/.kotlin/
+android/build/
+android/app/build/
+android/local.properties
+.idea/
+*.iml
+
+# Python tests
+__pycache__/
+.venv/
+
+# artemis phone test runs
+.artemis/

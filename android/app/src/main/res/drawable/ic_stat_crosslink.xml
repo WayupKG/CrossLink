@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Силуэт логотипа для уведомления «Поддерживает связь с Mac». -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="660"
+    android:viewportHeight="660">
+    <group
+        android:translateX="-176" android:translateY="-238">
+        <clip-path android:pathData="M-2000,-2000H3000V3000H-2000ZM628,358A102,102 0,0 0,526,460V748A102,102 0,0 0,628,850H754A102,102 0,0 0,856,748V460A102,102 0,0 0,754,358Z" />
+        <path android:fillColor="#FFFFFFFF" android:pathData="M262,286H630A66,66 0,0 1,696,352V550A66,66 0,0 1,630,616H262A66,66 0,0 1,196,550V352A66,66 0,0 1,262,286Z" />
+        <path android:fillColor="#FFFFFFFF" android:pathData="M403,648H489A15,15 0,0 1,504,663V663A15,15 0,0 1,489,678H403A15,15 0,0 1,388,663V663A15,15 0,0 1,403,648Z" />
+    </group>
+    <group
+        android:translateX="-176" android:translateY="-238">
+        <path android:fillColor="#FFFFFFFF" android:pathData="M628,398H754A62,62 0,0 1,816,460V748A62,62 0,0 1,754,810H628A62,62 0,0 1,566,748V460A62,62 0,0 1,628,398Z" />
+    </group>
+</vector>
