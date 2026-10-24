@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Only the window behind Compose: its colors match ui/Theme.kt (background token) so there is no flash -->
+    <style name="Theme.CrossLink" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/background</item>
+    </style>
+    <color name="background">#FFFFFF</color>
+</resources>

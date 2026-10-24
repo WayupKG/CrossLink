@@ -1,24 +1,31 @@
 package kg.crosslink.app
 
 import android.content.ClipData
+import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
 import android.net.Uri
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Base64
 import android.util.Log
+import android.webkit.MimeTypeMap
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import org.json.JSONObject
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.IOException
+import java.io.InputStream
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.security.GeneralSecurityException
+import java.security.MessageDigest
 import java.security.SecureRandom
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
@@ -47,6 +54,9 @@ class LinkController private constructor(private val context: Context) {
         private const val PING_SECONDS = 20L
         /** The Mac answers every ping, so this much silence means the link is dead. */
         private const val READ_TIMEOUT_MS = 45_000
+        private const val HISTORY_SIZE = 50
+        /** Label of every clip CrossLink puts into the clipboard, so it is not sent back. */
+        const val CLIP_LABEL = "CrossLink"
     }
 
     var status by mutableStateOf("Нет подключения")
@@ -56,9 +66,16 @@ class LinkController private constructor(private val context: Context) {
     /** The link was lost and is being retried in the background; the user can stop it. */
     var reconnecting by mutableStateOf(false)
         private set
-    var receivedText by mutableStateOf("")
+    /** A pairing is saved on the phone, so "Connect" works without scanning again. */
+    var hasPairing by mutableStateOf(false)
         private set
+    /** Newest first, see [HistoryItem]. Changed on the main thread only. */
+    val history = mutableStateListOf<HistoryItem>()
     var draft by mutableStateOf("")
+    /** When the clip [offerClipboard] or [sendClipboard] last looked at was copied. Main thread only. */
+    private var clipStamp = 0L
+    /** The main screen has window focus, so the clipboard can be read when the link comes up. */
+    var focused = false
     var pairCode by mutableStateOf("")
     private val ui = Handler(Looper.getMainLooper())
     private val executor = Executors.newSingleThreadExecutor()
@@ -85,6 +102,25 @@ class LinkController private constructor(private val context: Context) {
     )
 
     private class PairCode(val host: String, val port: Int, val secret: ByteArray)
+
+    /** A file going to the Mac. Sent chunk by chunk on the sender thread, so pings and texts slip in between. */
+    private class Upload(val id: String, val file: OutgoingFile, val item: HistoryItem, val session: Session) {
+        val digest: MessageDigest = MessageDigest.getInstance("SHA-256")
+        var sent = 0L
+        var shownPercent = -1
+        /** The Mac answered file_done ok=false: stop sending. */
+        @Volatile var refused = false
+    }
+
+    private class Download(val file: IncomingFile, val item: HistoryItem) { var shownPercent = -1 }
+
+    /** Files coming from the Mac by transfer id; touched only on the reading thread. */
+    private val downloads = HashMap<String, Download>()
+    /** Files waiting to go out and the one going now; touched only on the sender thread. */
+    private val uploads = ArrayDeque<Upload>()
+    private var uploading: Upload? = null
+    /** Uploads the Mac has not confirmed with file_done yet. */
+    private val unconfirmed = ConcurrentHashMap<String, Upload>()
 
     /** The Mac answered with another key: it was re-paired, so retrying cannot help. */
     private class AuthFailed : IOException("Pairing key rejected")
@@ -117,6 +153,7 @@ class LinkController private constructor(private val context: Context) {
         restored = true
         val saved = SavedPairing(context).load() ?: return
         pairCode = saved
+        hasPairing = true
         connect(saved, save = false)
     }
 
@@ -182,16 +219,35 @@ class LinkController private constructor(private val context: Context) {
             if (save) { try { SavedPairing(context).save(raw()) } catch (_: Exception) { /* Keep working without persistence */ } }
             retryDelayMs = FIRST_RETRY_MS
             startPinging(currentSession, current)
-            update(id) { connected = true; reconnecting = false; status = "Подключено к Mac · зашифровано" }
+            update(id) {
+                connected = true; reconnecting = false; hasPairing = true; status = "Подключено к Mac · зашифровано"
+                // The app was opened before the link was up: what was copied meanwhile goes now
+                if (focused) offerClipboard()
+            }
             while (epoch.get() == id) {
                 val message = decode(readRaw(input), currentSession)
                 val text = message.optString("text", "").take(20000)
                 when (message.optString("type")) {
-                    "text" -> update(id) { receivedText = text }
+                    "text" -> update(id) { remember(HistoryItem(true, HistoryItem.Kind.TEXT, text)) }
                     "clipboard" -> update(id) {
-                        receivedText = text
+                        remember(HistoryItem(true, HistoryItem.Kind.CLIPBOARD, text))
                         (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
-                            .setPrimaryClip(ClipData.newPlainText("CrossLink", text))
+                            .setPrimaryClip(ClipData.newPlainText(CLIP_LABEL, text))
+                    }
+                    "file_start" -> startDownload(currentSession, message)
+                    "file_chunk" -> receiveChunk(currentSession, message)
+                    "file_end" -> finishDownload(currentSession, message)
+                    "file_cancel" -> downloads.remove(message.optString("id"))?.let {
+                        it.file.abort()
+                        ui.post { it.item.state = HistoryItem.State.FAILED }
+                    }
+                    "file_done" -> unconfirmed.remove(message.optString("id"))?.let {
+                        val ok = message.optBoolean("ok")
+                        it.refused = !ok
+                        ui.post {
+                            it.item.state = if (ok) HistoryItem.State.DONE else HistoryItem.State.FAILED
+                            if (ok) it.item.progress = 1f
+                        }
                     }
                     "ping" -> sendEncrypted(currentSession, "pong", "")
                     "pong" -> Unit
@@ -219,6 +275,11 @@ class LinkController private constructor(private val context: Context) {
             }
         } finally {
             current?.closeQuietly()
+            // Half-received files are useless without the rest; the Mac cannot confirm uploads any more
+            downloads.values.forEach { it.file.abort(); ui.post { it.item.state = HistoryItem.State.FAILED } }
+            downloads.clear()
+            unconfirmed.values.forEach { it.refused = true; ui.post { it.item.state = HistoryItem.State.FAILED } }
+            unconfirmed.clear()
             if (epoch.get() == id) {
                 stopPinging()
                 session = null
@@ -313,6 +374,7 @@ class LinkController private constructor(private val context: Context) {
     fun forgetPairing() {
         disconnect()
         SavedPairing(context).clear()
+        hasPairing = false
         pairCode = ""
         status = "Сопряжение удалено с Android"
     }
@@ -325,18 +387,209 @@ class LinkController private constructor(private val context: Context) {
             return false
         }
         val current = session ?: run { status = "Сначала подключитесь к Mac"; return false }
+        val item = HistoryItem(false, if (asClipboard) HistoryItem.Kind.CLIPBOARD else HistoryItem.Kind.TEXT, text)
+        remember(item)
         sender.execute {
             try { sendEncrypted(current, if (asClipboard) "clipboard" else "text", text) }
-            catch (_: Exception) { ui.post { status = "Ошибка отправки" } }
+            catch (_: Exception) { ui.post { item.state = HistoryItem.State.FAILED; status = "Ошибка отправки" } }
         }
         return true
     }
 
-    fun sendClipboard() {
+    /** Queues files for the Mac (they go one after another); false when there is no connection. */
+    fun sendFiles(files: List<OutgoingFile>): Boolean {
+        if (files.isEmpty()) return false
+        val current = session ?: run {
+            files.forEach { it.input.closeQuietly() }
+            status = "Сначала подключитесь к Mac"
+            return false
+        }
+        for (file in files) {
+            val item = HistoryItem(false, HistoryItem.Kind.FILE, file.name, file.size, file.mime)
+            remember(item)
+            val upload = Upload(newTransferId(), file, item, current)
+            sender.execute {
+                uploads.addLast(upload)
+                if (uploading == null) nextUpload()
+            }
+        }
+        return true
+    }
+
+    fun clearHistory() {
+        history.removeAll { it.state != HistoryItem.State.ACTIVE }
+    }
+
+    private fun remember(item: HistoryItem) {
+        history.add(0, item)
+        while (history.size > HISTORY_SIZE) history.removeAt(history.lastIndex)
+    }
+
+    private fun newTransferId(): String = Transfers.hex(ByteArray(16).also(random::nextBytes))
+
+    private fun nextUpload() {
+        val upload = uploads.removeFirstOrNull()
+        uploading = upload
+        if (upload == null) {
+            LinkService.progress(context, null)
+            return
+        }
+        try {
+            sendEncrypted(upload.session, JSONObject().put("type", "file_start").put("id", upload.id)
+                .put("name", upload.file.name).put("size", upload.file.size).put("mime", upload.file.mime))
+            unconfirmed[upload.id] = upload
+            sender.execute { uploadChunk(upload) }
+        } catch (_: Exception) { endUpload(upload, failed = true) }
+    }
+
+    private fun uploadChunk(upload: Upload) {
+        if (upload.refused) { endUpload(upload, failed = true); return }
+        val buffer = ByteArray(Transfers.CHUNK)
+        val count = try { readChunk(upload.file.input, buffer) } catch (_: IOException) {
+            // The source went away (deleted, cloud item offline): let the Mac drop its partial file
+            try { sendEncrypted(upload.session, JSONObject().put("type", "file_cancel").put("id", upload.id)) }
+            catch (_: Exception) { }
+            endUpload(upload, failed = true)
+            return
+        }
+        try {
+            if (count > 0) {
+                upload.digest.update(buffer, 0, count)
+                upload.sent += count
+                sendEncrypted(upload.session, JSONObject().put("type", "file_chunk").put("id", upload.id)
+                    .put("data", Base64.encodeToString(buffer, 0, count, Base64.NO_WRAP)))
+                val percent = percentOf(upload.sent, upload.file.size)
+                if (percent != upload.shownPercent) {
+                    upload.shownPercent = percent
+                    ui.post { upload.item.progress = percent / 100f }
+                    LinkService.progress(context, "На Mac: ${upload.file.name} · $percent%")
+                }
+            }
+            if (count == Transfers.CHUNK) {
+                sender.execute { uploadChunk(upload) }
+                return
+            }
+            sendEncrypted(upload.session, JSONObject().put("type", "file_end").put("id", upload.id)
+                .put("sha256", Transfers.hex(upload.digest.digest())))
+            endUpload(upload, failed = false)
+        } catch (_: Exception) { endUpload(upload, failed = true) }
+    }
+
+    /** The upload stopped sending. It turns DONE only when the Mac confirms with file_done. */
+    private fun endUpload(upload: Upload, failed: Boolean) {
+        upload.file.input.closeQuietly()
+        if (failed) {
+            unconfirmed.remove(upload.id)
+            ui.post { upload.item.state = HistoryItem.State.FAILED }
+        }
+        nextUpload()
+    }
+
+    private fun readChunk(input: InputStream, buffer: ByteArray): Int {
+        var total = 0
+        while (total < buffer.size) {
+            val read = input.read(buffer, total, buffer.size - total)
+            if (read < 0) break
+            total += read
+        }
+        return total
+    }
+
+    /** Unknown size (-1) shows as an empty bar until the end. */
+    private fun percentOf(done: Long, size: Long): Int = if (size > 0) (done * 100 / size).toInt().coerceIn(0, 100) else 0
+
+    private fun startDownload(current: Session, message: JSONObject) {
+        val transferId = message.optString("id")
+        if (transferId.isEmpty() || downloads.containsKey(transferId)) return
+        val name = Transfers.safeName(message.optString("name"))
+        val size = message.optLong("size", -1)
+        val mime = message.optString("mime").ifBlank {
+            MimeTypeMap.getSingleton().getMimeTypeFromExtension(name.substringAfterLast('.', "").lowercase())
+                ?: "application/octet-stream"
+        }
+        val item = HistoryItem(true, HistoryItem.Kind.FILE, name, size, mime)
+        ui.post { remember(item) }
+        val file = if (downloads.size < Transfers.MAX_INCOMING && size <= Transfers.MAX_SIZE) {
+            try { IncomingFile(context, name, size, mime) } catch (e: Exception) {
+                Log.w("CrossLink", "Cannot save a file: $e")
+                null
+            }
+        } else null
+        if (file == null) refuseDownload(current, transferId, item)
+        else downloads[transferId] = Download(file, item)
+    }
+
+    private fun receiveChunk(current: Session, message: JSONObject) {
+        val transferId = message.optString("id")
+        val download = downloads[transferId] ?: return
+        try {
+            download.file.write(Base64.decode(message.getString("data"), Base64.NO_WRAP))
+        } catch (e: Exception) {
+            Log.w("CrossLink", "File chunk rejected: $e")
+            downloads.remove(transferId)
+            download.file.abort()
+            refuseDownload(current, transferId, download.item)
+            return
+        }
+        val percent = percentOf(download.file.received, download.file.size)
+        if (percent != download.shownPercent) {
+            download.shownPercent = percent
+            ui.post { download.item.progress = percent / 100f }
+        }
+    }
+
+    private fun finishDownload(current: Session, message: JSONObject) {
+        val transferId = message.optString("id")
+        val download = downloads.remove(transferId) ?: return
+        val ok = try { download.file.publish(message.optString("sha256")) } catch (_: Exception) {
+            download.file.abort()
+            false
+        }
+        sendEncrypted(current, JSONObject().put("type", "file_done").put("id", transferId).put("ok", ok))
+        ui.post {
+            download.item.state = if (ok) HistoryItem.State.DONE else HistoryItem.State.FAILED
+            if (ok) {
+                download.item.progress = 1f
+                download.item.uri = download.file.uri
+            }
+        }
+        if (ok) LinkService.fileReceived(context, download.file.name, download.file.uri, download.file.mime)
+    }
+
+    private fun refuseDownload(current: Session, transferId: String, item: HistoryItem) {
+        ui.post { item.state = HistoryItem.State.FAILED }
+        sendEncrypted(current, JSONObject().put("type", "file_done").put("id", transferId).put("ok", false))
+    }
+
+    /** Sends what is in the clipboard now; the caller must have window focus (Android 10+). */
+    fun sendClipboard(): Boolean {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val text = clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString().orEmpty()
-        if (text.isEmpty()) status = "Буфер обмена пуст или недоступен"
-        else sendMessage(text, asClipboard = true)
+        if (text.isEmpty()) {
+            status = "Буфер обмена пуст или недоступен"
+            return false
+        }
+        clipStamp = clipboard.primaryClipDescription?.timestamp ?: clipStamp
+        return sendMessage(text, asClipboard = true)
+    }
+
+    /**
+     * Called when the app gets focus: sends a clip copied on the phone since the last look, so
+     * opening CrossLink is enough. Skips clips CrossLink set itself (from the Mac or the history)
+     * and the ones marked sensitive, as password managers do. The description is checked first:
+     * reading it does not show Android's "pasted from clipboard" notice, reading the text does.
+     */
+    fun offerClipboard() {
+        if (session == null) return
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val description = clipboard.primaryClipDescription ?: return
+        if (description.timestamp == clipStamp) return
+        clipStamp = description.timestamp
+        if (description.label?.toString() == CLIP_LABEL || !description.hasMimeType("text/*")) return
+        if (Build.VERSION.SDK_INT >= 33 &&
+            description.extras?.getBoolean(ClipDescription.EXTRA_IS_SENSITIVE) == true) return
+        val text = clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString().orEmpty()
+        if (text.isNotBlank()) sendMessage(text, asClipboard = true)
     }
 
     private fun update(id: Int, block: () -> Unit) {
@@ -367,12 +620,15 @@ class LinkController private constructor(private val context: Context) {
         return parsed
     }
 
-    private fun sendEncrypted(current: Session, type: String, text: String) {
+    private fun sendEncrypted(current: Session, type: String, text: String) =
+        sendEncrypted(current, JSONObject().put("type", type).put("text", text))
+
+    /** Throws once [current] is no longer the live session, so a queued transfer notices the lost link. */
+    private fun sendEncrypted(current: Session, message: JSONObject) {
         synchronized(writeLock) {
-            if (session !== current) return
+            if (session !== current) throw IOException("Link closed")
             val next = current.outgoingSeq + 1
-            val plain = JSONObject().put("type", type).put("seq", next).put("text", text)
-                .toString().toByteArray(Charsets.UTF_8)
+            val plain = message.put("seq", next).toString().toByteArray(Charsets.UTF_8)
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
             cipher.init(Cipher.ENCRYPT_MODE, current.outboundKey)
             val frame = cipher.iv + cipher.doFinal(plain)
@@ -391,4 +647,6 @@ class LinkController private constructor(private val context: Context) {
     }
 
     private fun Socket.closeQuietly() = try { close() } catch (_: Exception) { }
+
+    private fun InputStream.closeQuietly() = try { close() } catch (_: Exception) { }
 }

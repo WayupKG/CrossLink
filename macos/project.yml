@@ -14,6 +14,9 @@ targets:
     platform: macOS
     sources:
       - CrossLink
+      # The Inter licence travels with the font (SIL OFL 1.1)
+      - path: ../licenses/Inter-OFL.txt
+        buildPhase: resources
     info:
       path: CrossLink/Info.plist
       properties:
@@ -24,6 +27,26 @@ targets:
           - _crosslink._tcp
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
+        CFBundleShortVersionString: '0.2.0'
+        CFBundleVersion: '2'
+        # Inter from replai-admin, in Fonts/ (copied into Resources)
+        ATSApplicationFontsPath: .
+        # "Open With → CrossLink" in Finder sends the file to the phone; never the default app
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: Файл для телефона
+            CFBundleTypeRole: Viewer
+            LSHandlerRank: Alternate
+            LSItemContentTypes:
+              - public.data
+        NSServices:
+          - NSMenuItem:
+              default: Отправить на телефон
+            NSMessage: sendToPhone
+            NSPortName: CrossLink
+            NSSendFileTypes:
+              - public.data
+            # An empty context keeps the service enabled by default
+            NSRequiredContext: {}
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: kg.crosslink.macos

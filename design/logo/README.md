@@ -10,11 +10,16 @@
 
 Стекло — это размытие (`feGaussianBlur`), которого нет в VectorDrawable, поэтому слои Android — PNG.
 
-Рендер в PNG (Chrome рисует фильтры точно; QuickLook — нет):
+На иконках Mac и Android есть плёночное зерно, как на тёмной панели вверху приложения. Оно
+накладывается отдельно для каждого размера PNG, чтобы оставаться в один пиксель: зерно, нарисованное
+на 1024 px и уменьшенное, усредняется и пропадает. Сила — `GRAIN` в `export.py` (0,028); на
+иконках Mac 16–32 px зерна нет, на 64 px — слабее.
+
+Все PNG пересобирает один скрипт (Chrome рисует фильтры точно, QuickLook — нет):
 
 ```bash
-"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --disable-gpu \
-  --hide-scrollbars --default-background-color=00000000 \
-  --screenshot=mac_icon.png --window-size=1024,1024 "file://$PWD/mac_icon.svg"
-sips -z 512 512 mac_icon.png --out icon_512.png
+python3 -m venv .venv && .venv/bin/pip install pillow numpy
+.venv/bin/python design/logo/export.py
 ```
+
+Значок строки меню (`glyph.svg`) зерна не получает: это шаблон одного цвета.

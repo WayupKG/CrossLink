@@ -15,6 +15,7 @@ from urllib.parse import parse_qs, urlsplit
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 MAX_FRAME = 512 * 1024
+FILE_CHUNK = 192 * 1024
 
 
 def hkdf_sha256(key: bytes, salt: bytes, info: str) -> bytes:
@@ -108,6 +109,36 @@ class ProtocolContract(unittest.TestCase):
             frame(b"x" * (MAX_FRAME + 1))
         with self.assertRaises(ValueError):
             unframe_parts([struct.pack(">I", MAX_FRAME + 1)])
+
+    def seal(self, message: dict) -> bytes:
+        iv = os.urandom(12)
+        return iv + AESGCM(self.android_to_mac).encrypt(iv, json.dumps(message).encode(), None)
+
+    def test_full_file_chunk_fits_a_frame(self):
+        chunk = {"type": "file_chunk", "seq": 2**31 - 1, "id": "f" * 32,
+                 "data": base64.b64encode(os.urandom(FILE_CHUNK)).decode()}
+        sealed = self.seal(chunk)
+        self.assertLess(len(sealed), MAX_FRAME)
+        self.assertEqual(len(frame(sealed)), len(sealed) + 4)
+
+    def test_file_roundtrip_by_chunks_and_hash(self):
+        content = os.urandom(FILE_CHUNK * 2 + 777)
+        messages = [{"type": "file_start", "id": "a" * 32, "name": "photo.jpg", "size": len(content), "mime": "image/jpeg"}]
+        for start in range(0, len(content), FILE_CHUNK):
+            messages.append({"type": "file_chunk", "id": "a" * 32,
+                             "data": base64.b64encode(content[start:start + FILE_CHUNK]).decode()})
+        messages.append({"type": "file_end", "id": "a" * 32, "sha256": hashlib.sha256(content).hexdigest()})
+        frames, rest = unframe_parts([frame(self.seal(m)) for m in messages])
+        self.assertEqual(rest, b"")
+        received, digest = bytearray(), None
+        for blob in frames:
+            message = json.loads(AESGCM(self.android_to_mac).decrypt(blob[:12], blob[12:], None))
+            if message["type"] == "file_chunk":
+                received += base64.b64decode(message["data"])
+            elif message["type"] == "file_end":
+                digest = message["sha256"]
+        self.assertEqual(len(received), messages[0]["size"])
+        self.assertEqual(hashlib.sha256(received).hexdigest(), digest)
 
     def test_discovery_id_vector(self):
         # Same value from Pairing.discoveryID (Swift) and LinkController.discoveryId (Kotlin);

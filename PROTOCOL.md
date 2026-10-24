@@ -58,6 +58,8 @@ using DataInputStream; macOS buffers partial NWConnection reads before parsing.
 
 `{"type":"text"|"clipboard"|"ping"|"pong"|"bye","seq":2,"text":"..."}`
 
+File messages (below) carry their own fields instead of `text`.
+
 - Each direction independently starts sequence numbering at 1 (including ready/ready_ack).
 - Receiver demands *exactly* previous sequence + 1; replay and out-of-order frames fail closed.
 - Text max 20,000 UTF-8 bytes; UI may truncate incoming display to 20,000 characters.
@@ -67,6 +69,35 @@ using DataInputStream; macOS buffers partial NWConnection reads before parsing.
   Android treats 45 s without any frame as a dead link, the Mac drops a phone after 60 s.
 - `bye` (Mac → Android): the user disconnected on the Mac; Android stops reconnecting.
 - No plaintext payload or secret is logged to disk.
+
+## Files
+
+Either side can send files; they go one after another, each with a random 128-bit `id`
+(32 lowercase hex chars). All messages are ordinary encrypted messages with `seq`.
+
+1. Sender → receiver: `{"type":"file_start","id":"…","name":"IMG_0042.jpg","size":1234567,"mime":"image/jpeg"}`.
+   `size` is the byte count, or `-1` when the source does not know it.
+2. Sender → receiver, repeated: `{"type":"file_chunk","id":"…","data":"<base64>"}` with at most
+   196,608 raw bytes (262,144 base64 chars), so a sealed chunk stays far below the 512 KiB frame.
+   The sender reads the next chunk only after the previous one is written to the socket: TCP
+   backpressure keeps memory flat, and pings, texts and `file_done` of other files slip in between.
+3. Sender → receiver: `{"type":"file_end","id":"…","sha256":"<64 lowercase hex of the whole file>"}`.
+4. Receiver → sender: `{"type":"file_done","id":"…","ok":true|false}`. `ok:false` may also come
+   before `file_end` (no space, too many files at once); the sender then stops sending that file.
+5. Sender → receiver: `{"type":"file_cancel","id":"…"}` when the source became unreadable.
+
+Receiver rules:
+
+- At most 4 incoming files at a time and 4 GiB per file; anything else is answered `ok:false`.
+- More bytes than the announced `size`, a different byte count at the end, or a SHA-256 mismatch
+  discard the file and answer `ok:false`.
+- The name is only a hint: keep its last path component, drop control characters and `:`,
+  strip leading dots and spaces, cut to 120 characters keeping the extension, `file` if empty.
+- Data is written to a temporary/pending file and becomes visible only after the hash matches.
+  The Mac saves to `~/Downloads` (a free name like `photo 2.jpg`) with the quarantine attribute,
+  so Gatekeeper checks an app or script before it runs. Android saves photos to
+  `Pictures/CrossLink`, videos to `Movies/CrossLink`, everything else to `Download/CrossLink`.
+- A dropped connection discards half-received files; there is no resume.
 
 ## Security and limitations
 
@@ -79,7 +110,8 @@ using DataInputStream; macOS buffers partial NWConnection reads before parsing.
 - Key rotation on Mac invalidates any Android device's saved credentials.
 - The Mac listener binds to all local interfaces. Do not forward TCP port 48321
   to the public Internet; keep it behind a trusted LAN firewall.
-- No transfer of images, files, notification content, or SMS in v0.1.
+- Files are accepted from the paired device without asking; pairing is the trust decision.
+- No transfer of notification content or SMS.
 - The Android connection is **not guaranteed to remain alive in the background**.
 - This design requires on-device review and penetration testing before real-world
   distribution. QR codes should be short-lived in a future production version.

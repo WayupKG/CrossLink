@@ -12,7 +12,9 @@ struct Pairing {
         return Data(tag).prefix(8).map { String(format: "%02x", $0) }.joined()
     }
 
-    static func storedSecret() -> Data {
+    /// The saved pairing key, or a new one when there is none. Nil when the Keychain refused access
+    /// (the owner pressed "Deny" for a rebuilt app): the saved key must survive that, not be replaced.
+    static func storedSecret() -> Data? {
         let service = "kg.crosslink.pairing.v1"
         let account = "local-device"
         let query: [String: Any] = [
@@ -23,15 +25,12 @@ struct Pairing {
             kSecMatchLimit as String: kSecMatchLimitOne
         ]
         var result: CFTypeRef?
-        if SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
-           let existing = result as? Data, existing.count == 32 {
+        let found = SecItemCopyMatching(query as CFDictionary, &result)
+        if found == errSecSuccess, let existing = result as? Data, existing.count == 32 {
             return existing
         }
-        var secret = Data(count: 32)
-        let rc = secret.withUnsafeMutableBytes { buffer in
-            SecRandomCopyBytes(kSecRandomDefault, 32, buffer.baseAddress!)
-        }
-        precondition(rc == errSecSuccess, "Secure random generator failed")
+        guard found == errSecSuccess || found == errSecItemNotFound else { return nil }
+        let secret = randomSecret()
         let saveQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -45,6 +44,15 @@ struct Pairing {
         ]
         SecItemDelete(deleteQuery as CFDictionary)
         precondition(SecItemAdd(saveQuery as CFDictionary, nil) == errSecSuccess, "Cannot store pairing key")
+        return secret
+    }
+
+    static func randomSecret() -> Data {
+        var secret = Data(count: 32)
+        let rc = secret.withUnsafeMutableBytes { buffer in
+            SecRandomCopyBytes(kSecRandomDefault, 32, buffer.baseAddress!)
+        }
+        precondition(rc == errSecSuccess, "Secure random generator failed")
         return secret
     }
 
