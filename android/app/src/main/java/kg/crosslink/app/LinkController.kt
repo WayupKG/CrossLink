@@ -147,6 +147,11 @@ class LinkController private constructor(private val context: Context) {
         return PairCode(host, port, secret)
     }
 
+    /** After a reboot or an app update (see BootReceiver): reconnects unless the user had switched the link off. */
+    fun resume() {
+        if (SavedPairing(context).autoConnect) restorePairing()
+    }
+
     /** Reconnects with the saved pairing once per process, so a recreated screen keeps the live connection. */
     fun restorePairing() {
         if (restored) return
@@ -160,6 +165,7 @@ class LinkController private constructor(private val context: Context) {
     fun connect(raw: String, save: Boolean = true) {
         val code = parse(raw) ?: run { status = "Неверный код сопряжения"; return }
         wanted = raw.trim()
+        SavedPairing(context).autoConnect = true
         retryDelayMs = FIRST_RETRY_MS
         reconnecting = false
         LinkService.start(context)
@@ -358,8 +364,10 @@ class LinkController private constructor(private val context: Context) {
         pinger = null
     }
 
+    /** The user switches the link off; it stays off after a reboot too. */
     fun disconnect() {
         wanted = null
+        SavedPairing(context).autoConnect = false
         epoch.incrementAndGet()
         stopPinging()
         socket?.closeQuietly()

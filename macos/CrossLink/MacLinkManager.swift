@@ -15,6 +15,8 @@ final class MacLinkManager: ObservableObject {
         didSet { UserDefaults.standard.set(autoClipboard, forKey: "autoClipboard") }
     }
     @Published private(set) var launchAtLogin = SMAppService.mainApp.status == .enabled
+    /// Banners and sound for what arrives; false once the user (or an old build) refused them.
+    @Published private(set) var notificationsAllowed = true
 
     let port: UInt16 = 48321
     /// A throwaway key when the Keychain refused the saved one (see keychainDenied).
@@ -118,8 +120,13 @@ final class MacLinkManager: ObservableObject {
             MainActor.assumeIsolated { self?.refreshAddress() }
         }
         pathMonitor.start(queue: .main)
-        notifier.requestPermission()
+        notifier.requestPermission { [weak self] allowed in Task { @MainActor in self?.notificationsAllowed = allowed } }
         restart()
+    }
+
+    /// Called when the menu opens: the user may have changed it in System Settings meanwhile.
+    func refreshNotificationPermission() {
+        notifier.checkPermission { [weak self] allowed in Task { @MainActor in self?.notificationsAllowed = allowed } }
     }
 
     func resetPairing() {

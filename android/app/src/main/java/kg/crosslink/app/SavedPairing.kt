@@ -39,6 +39,14 @@ class SavedPairing(private val context: Context) {
 
     fun clear() { prefs.edit().remove("uri").apply() }
 
+    /**
+     * Whether to reconnect by itself after a reboot or an update: on with every connection,
+     * off once the user switches the link off on the phone. The Mac quitting does not change it.
+     */
+    var autoConnect: Boolean
+        get() = prefs.getBoolean("auto", true)
+        set(value) { prefs.edit().putBoolean("auto", value).apply() }
+
     fun load(): String? = try {
         val encoded = prefs.getString("uri", null) ?: return null
         val data = Base64.decode(encoded, Base64.DEFAULT)

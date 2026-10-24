@@ -10,6 +10,9 @@ struct ContentView: View {
     var body: some View {
         VStack(spacing: 10) {
             hero
+            if !link.notificationsAllowed {
+                notificationsOff.transition(.opacity)
+            }
             if link.connected {
                 composer.transition(.opacity.combined(with: .move(edge: .top)))
             }
@@ -25,6 +28,8 @@ struct ContentView: View {
         .foregroundStyle(Tokens.foreground)
         .animation(Motion.slow, value: link.connected)
         .animation(Motion.slow, value: link.history.count)
+        .animation(Motion.medium, value: link.notificationsAllowed)
+        .onAppear { link.refreshNotificationPermission() }
     }
 
     // MARK: Hero
@@ -111,6 +116,24 @@ struct ContentView: View {
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
         .fixedSize()
+    }
+
+    // MARK: Notifications
+
+    private var notificationsOff: some View {
+        Panel {
+            HStack(alignment: .top, spacing: 10) {
+                IconBox(symbol: "bell.slash", tint: Tokens.destructiveText, fill: Tokens.destructive.opacity(0.12))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Уведомления выключены").font(Typo.inter(12.5, .medium))
+                    Text("Без них не видно и не слышно, что пришёл файл или текст с телефона.")
+                        .font(Typo.caption).foregroundStyle(Tokens.mutedForeground)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Button { Notifier.openSettings() } label: { Label("Включить в Настройках", systemImage: "bell.badge") }
+                .buttonStyle(Pill(kind: .secondary, height: 30))
+        }
     }
 
     // MARK: Composer
