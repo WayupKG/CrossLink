@@ -1,25 +1,35 @@
-# Логотип CrossLink — «Стекло»
+# CrossLink logo — "Glass"
 
-Экран Mac и матовый стеклянный телефон поверх него. Холст 1024×1024.
+A Mac screen with a frosted glass phone in front of it. Canvas: 1024×1024.
 
-| Файл | Куда идёт |
+| File | Where it goes |
 |---|---|
 | `mac_icon.svg` | `macos/CrossLink/Assets.xcassets/AppIcon.appiconset` (16–1024 px) |
 | `android_bg.svg`, `android_fg.svg` | `android/app/src/main/res/mipmap-*/ic_launcher_{background,foreground}.png` (108–432 px) |
-| `glyph.svg` | значок строки меню Mac (`MenuBarIcon`, шаблон 18/36 px); тот же силуэт вектором — `drawable/ic_launcher_monochrome.xml`, `drawable/ic_stat_crosslink.xml` |
+| `glyph.svg` | Mac menu bar icon (`MenuBarIcon`, 18/36 px template); the same silhouette as vectors in `drawable/ic_launcher_monochrome.xml` and `drawable/ic_stat_crosslink.xml` |
 
-Стекло — это размытие (`feGaussianBlur`), которого нет в VectorDrawable, поэтому слои Android — PNG.
+The glass is a blur (`feGaussianBlur`), which VectorDrawable doesn't have, so the Android layers
+are PNGs.
 
-На иконках Mac и Android есть плёночное зерно, как на тёмной панели вверху приложения. Оно
-накладывается отдельно для каждого размера PNG, чтобы оставаться в один пиксель: зерно, нарисованное
-на 1024 px и уменьшенное, усредняется и пропадает. Сила — `GRAIN` в `export.py` (0,028); на
-иконках Mac 16–32 px зерна нет, на 64 px — слабее.
+The Mac and Android icons carry film grain, like the dark panel at the top of the app. It is added
+separately for every PNG size so that it stays one pixel wide: grain drawn at 1024 px and scaled
+down averages out and disappears. Its strength is `GRAIN` in `export.py` (0.028); Mac icons at
+16–32 px get no grain, the 64 px one gets less.
 
-Все PNG пересобирает один скрипт (Chrome рисует фильтры точно, QuickLook — нет):
+One script rebuilds every PNG (Chrome renders the filters exactly, QuickLook doesn't):
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install pillow numpy
 .venv/bin/python design/logo/export.py
 ```
 
-Значок строки меню (`glyph.svg`) зерна не получает: это шаблон одного цвета.
+The menu bar icon (`glyph.svg`) gets no grain: it is a single-colour template.
+
+## README banner
+
+`design/banner/banner.html` is the README banner and GitHub social preview (1280×640). Render it
+to `docs/assets/banner.jpg` with:
+
+```bash
+design/banner/render.sh
+```

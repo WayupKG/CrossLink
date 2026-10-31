@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<!--
+  README banner and GitHub social preview (1280×640). Rendered to docs/assets/banner.png by
+  design/banner/render.sh with headless Chrome, the same way design/logo/export.py draws the icons.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face { font-family: "Inter Display"; font-weight: 600; src: url("../../macos/CrossLink/Fonts/InterDisplay-SemiBold.ttf"); }
+  @font-face { font-family: "Inter"; font-weight: 400; src: url("../../macos/CrossLink/Fonts/Inter-Regular.ttf"); }
+  @font-face { font-family: "Inter"; font-weight: 500; src: url("../../macos/CrossLink/Fonts/Inter-Medium.ttf"); }
+  @font-face { font-family: "Inter"; font-weight: 600; src: url("../../macos/CrossLink/Fonts/Inter-SemiBold.ttf"); }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1280px; height: 640px; overflow: hidden; background: #0A0B12; }
+
+  .panel {
+    position: relative; width: 1280px; height: 640px; overflow: hidden;
+    /* The app's dark brand surface, lit by the logo's blue and pink glows */
+    background:
+      radial-gradient(620px 420px at 18% 30%, rgba(53, 82, 245, 0.55), transparent 70%),
+      radial-gradient(520px 380px at 34% 92%, rgba(236, 72, 153, 0.30), transparent 70%),
+      radial-gradient(700px 500px at 100% 0%, rgba(99, 102, 241, 0.22), transparent 70%),
+      linear-gradient(160deg, #141833 0%, #0A0B12 62%);
+  }
+  .grain { position: absolute; inset: 0; opacity: 0.16; mix-blend-mode: overlay; }
+  .grid {
+    position: absolute; inset: 0; opacity: 0.07;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.9) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.9) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(900px 520px at 70% 50%, #000 0%, transparent 75%);
+  }
+
+  .content { position: absolute; inset: 0; display: flex; align-items: center; padding: 0 96px; gap: 72px; }
+  .icon { width: 300px; height: 300px; flex: none; filter: drop-shadow(0 30px 60px rgba(10, 14, 60, 0.55)); }
+
+  h1 {
+    font: 600 112px/1 "Inter Display", "Inter", sans-serif; letter-spacing: -0.035em; color: #fff;
+  }
+  .tagline {
+    margin-top: 22px; font: 500 34px/1.3 "Inter", sans-serif; letter-spacing: -0.01em;
+    color: rgba(226, 230, 245, 0.78);
+  }
+  .tagline b { font-weight: 600; color: #fff; }
+  .chips { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 40px; max-width: 620px; }
+  .chip {
+    font: 500 21px/1 "Inter", sans-serif; color: rgba(255, 255, 255, 0.9);
+    padding: 12px 20px; border-radius: 999px;
+    background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.14);
+  }
+  .chip i {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 10px;
+    vertical-align: 3px; background: #7A88FF; box-shadow: 0 0 12px #7A88FF;
+  }
+</style>
+</head>
+<body>
+<div class="panel">
+  <div class="grid"></div>
+  <svg class="grain" width="1280" height="640" xmlns="http://www.w3.org/2000/svg">
+    <filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/></filter>
+    <rect width="100%" height="100%" filter="url(#n)"/>
+  </svg>
+  <div class="content">
+    <img class="icon" src="../../macos/CrossLink/Assets.xcassets/AppIcon.appiconset/icon_1024.png" alt="">
+    <div>
+      <h1>CrossLink</h1>
+      <p class="tagline"><b>Mac + Android</b>, linked directly<br>over your own Wi-Fi.</p>
+      <div class="chips">
+        <span class="chip"><i></i>End-to-end encrypted</span>
+        <span class="chip"><i></i>Clipboard</span>
+        <span class="chip"><i></i>Photos &amp; files</span>
+        <span class="chip"><i></i>No cloud, no accounts</span>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,50 @@
+name: Bug report
+description: Something doesn't work as expected
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Pair the phone with the Mac
+        2. Share a photo from the gallery
+        3. ...
+  - type: dropdown
+    id: side
+    attributes:
+      label: Where does it happen?
+      multiple: true
+      options:
+        - macOS app
+        - Android app
+        - Connection / pairing
+        - File transfer
+        - Clipboard
+  - type: input
+    id: mac
+    attributes:
+      label: Mac
+      placeholder: MacBook Air M2, macOS 15.2
+  - type: input
+    id: phone
+    attributes:
+      label: Phone
+      placeholder: Pixel 8, Android 15 (or vivo / Xiaomi with firmware version)
+  - type: input
+    id: version
+    attributes:
+      label: CrossLink version or commit
+      placeholder: 0.2.0 / a1b2c3d
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Please remove anything private first. Never post your pairing QR code.
