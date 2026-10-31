@@ -4,6 +4,9 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+// Release signing key, passed in by scripts/build-release.sh. Without it the release APK is unsigned.
+val releaseKeystore: String? = System.getenv("CROSSLINK_KEYSTORE")
+
 android {
     namespace = "kg.crosslink.app"
     compileSdk = 36
@@ -13,6 +16,19 @@ android {
         targetSdk = 36
         versionCode = 3
         versionName = "0.2.0"
+    }
+    signingConfigs {
+        if (releaseKeystore != null) create("release") {
+            storeFile = file(releaseKeystore)
+            storePassword = System.getenv("CROSSLINK_KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("CROSSLINK_KEY_ALIAS") ?: "crosslink"
+            keyPassword = System.getenv("CROSSLINK_KEYSTORE_PASSWORD")
+        }
+    }
+    buildTypes {
+        release {
+            if (releaseKeystore != null) signingConfig = signingConfigs.getByName("release")
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

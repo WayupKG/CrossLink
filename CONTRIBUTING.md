@@ -10,7 +10,7 @@ Security problems go through [SECURITY.md](SECURITY.md), not public issues.
 
 ## Development setup
 
-See [Getting started](README.md#-getting-started) for building both apps.
+See [Building from source](README.md#-building-from-source) for building both apps.
 
 | Part | Where | Check before a PR |
 |---|---|---|

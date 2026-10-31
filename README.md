@@ -9,6 +9,7 @@
 
 <p align="center">
   <a href="https://github.com/WayupKG/CrossLink/actions/workflows/ci.yml"><img src="https://github.com/WayupKG/CrossLink/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/WayupKG/CrossLink/releases/latest"><img src="https://img.shields.io/github/v/release/WayupKG/CrossLink?color=3552F5&label=release" alt="Latest release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-3552F5" alt="MIT License"></a>
   <img src="https://img.shields.io/badge/macOS-13%2B-111214?logo=apple&logoColor=white" alt="macOS 13+">
   <img src="https://img.shields.io/badge/Android-10%2B-111214?logo=android&logoColor=3DDC84" alt="Android 10+">
@@ -17,9 +18,10 @@
 </p>
 
 <p align="center">
+  <a href="#-download">Download</a> ·
   <a href="#-features">Features</a> ·
   <a href="#-how-it-works">How it works</a> ·
-  <a href="#-getting-started">Getting started</a> ·
+  <a href="#-building-from-source">Build</a> ·
   <a href="#-repository-layout">Layout</a> ·
   <a href="#-roadmap">Roadmap</a> ·
   <a href="README.ru.md">Русский</a>
@@ -34,8 +36,28 @@ even when the Mac's IP address changes.
 
 > [!NOTE]
 > CrossLink is at version **0.2** and is developed for personal use. The interface is currently
-> in Russian, there are no prebuilt binaries yet, and it has been tested on one Mac and one
-> Android phone. See [Status and limitations](#-status-and-limitations).
+> in Russian, and it has been tested on one Mac and one Android phone.
+> See [Status and limitations](#-status-and-limitations).
+
+## 📦 Download
+
+| | File | Requirements |
+|---|---|---|
+| 📱 **Android** | [`CrossLink-<version>.apk`](https://github.com/WayupKG/CrossLink/releases/latest) | Android 10 or later |
+| 💻 **macOS** | [`CrossLink-<version>-macOS.dmg`](https://github.com/WayupKG/CrossLink/releases/latest) | macOS 13 or later, Apple Silicon or Intel |
+
+**Android.** Open the APK on the phone and allow installing apps from your browser or file manager.
+If you installed a build from source before, uninstall it first: it is signed with a different key.
+
+**macOS.** Open the DMG and drag CrossLink to Applications. The app is not notarized by Apple yet, so
+the first launch is blocked: click **Done**, then open **System Settings → Privacy & Security** and
+click **Open Anyway** next to CrossLink. Or run once in Terminal:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/CrossLink.app
+```
+
+Then follow [First pairing](#-first-pairing). Checksums are in `SHA256SUMS.txt` next to the files.
 
 ## ✨ Features
 
@@ -95,7 +117,9 @@ sequenceDiagram
 The full wire format — framing, handshake, messages and file transfer — is specified in
 [**PROTOCOL.md**](PROTOCOL.md) and checked by independent [Python contract tests](tests/test_protocol.py).
 
-## 🚀 Getting started
+## 🚀 Building from source
+
+Release files are built with [`scripts/build-release.sh`](scripts/build-release.sh).
 
 ### Requirements
 
@@ -134,7 +158,7 @@ cd android
 Or open the `android/` folder in Android Studio and press **Run**. The QR scanner uses Google Play
 services; without them, copy the pairing code on the Mac and paste it on the phone.
 
-### First pairing
+## 🔗 First pairing
 
 1. Open the CrossLink menu on the Mac — it shows a QR code.
 2. On the phone, open CrossLink and tap **Сканировать QR-код** (Scan QR code).
@@ -164,6 +188,7 @@ CrossLink/
 │       ├── LinkService.kt    foreground service that keeps the link alive
 │       ├── MacFinder.kt      Bonjour discovery of the paired Mac
 │       └── SavedPairing.kt   pairing secret sealed by Android Keystore
+├── scripts/                  build-release.sh: signed APK and macOS DMG for GitHub Releases
 ├── tests/                    Python contract tests of the wire protocol
 ├── design/                   logo and icon sources, export scripts, README banner
 ├── docs/assets/              images for this README
@@ -185,7 +210,8 @@ python3 -m venv .venv && .venv/bin/pip install -r tests/requirements.txt
 
 ## 🚧 Status and limitations
 
-- **No prebuilt releases yet.** Build the apps from source as described above.
+- **The Mac app is not notarized.** There is no Apple Developer ID yet, so macOS asks to confirm the
+  first launch, and after each update it asks again for access to the pairing key in the Keychain.
 - **The interface is in Russian.** English localization is planned.
 - **Android → Mac clipboard needs one tap.** Since Android 10, a regular app can read the clipboard
   only while it is on screen. CrossLink does not use Accessibility or `READ_LOGS` workarounds,

@@ -19,3 +19,6 @@ __pycache__/
 
 # artemis phone test runs
 .artemis/
+
+# Release builds (scripts/build-release.sh)
+dist/
